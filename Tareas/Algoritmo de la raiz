@@ -1,0 +1,30 @@
+import math
+dato = 7
+valorx = 9
+Error = 0.0001;
+valory = ((valorx + dato/valorx)/2);
+
+while abs(valorx - valory)>Error:
+
+  valorx = valory
+  valory = ((valorx + dato/valorx)/2);
+  
+
+resultado = valory
+resultadoCalculadora = math.sqrt(7)
+
+print("El resultado es: ")
+print(resultado)
+print("El resultado por calculadora es: ")
+print(resultadoCalculadora)
+
+errorAbsoluto = abs(resultado - resultadoCalculadora)
+errorRelativo = abs(errorAbsoluto/resultadoCalculadora)
+
+print("Error absoluto: ", errorAbsoluto)
+
+
+#Entre mayor sea el valor de x, mas preciso sera el algoritmo
+#La convergencia del algoritmo depende del error, entre menor sea el valor del error, mas preciso es el algoritmo. 
+#Tiene buena convergencia
+#El algoritmo es valido para solucionar el problema
