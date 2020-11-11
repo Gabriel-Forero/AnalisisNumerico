@@ -1,0 +1,680 @@
+---
+title: "Análisis Numérico - Realizado por: Luisa Contreras, Gabriel Forero y Jairo Vanegas"
+output:
+  html_notebook: default
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+##Ejercicios   
+Los siguientes ejercicios estan relacionados con el tema de sistemas de ecuaciones lineales, los cuales se solucionan utilizando métodos númericos  
+Para la realización de los siguientes ejercicios instalar las librerias pracma, matrix y Rlinsolve
+
+```{r, echo=TRUE}
+library(pracma)
+library(Matrix)
+library(Rlinsolve)
+```
+
+
+1. a. Revise las siguientes funciones con la matriz A, que puede decir acerca de su funcionamiento y explique como se utilizan para descomponer la matriz A
+
+D1<-eye(n, m = n) # Genera una matriz identidad de dimensiones nxm
+D2<-ones(n, m = n) # Genera una matriz rellenada con valores=1 de dimensiones nxm
+D3<-zeros(n, m = n) # Genera una matriz rellenada con valores=0 de dimensiones nxm
+
+Dichas sirven para generar una matriz identidad, una matriz de ceros y una matriz de unos respectivamente. Estas pueden ser usadas para descomponer la matriz A a traves de la descomposicion LU.
+
+Con la matriz identidad "eye" se puede obtener la inversa de la matriz A si dividimos la matriz sobre su identidad A x AT = I => AT = I/A
+
+
+b. Evalue la matriz de transición para el método $\textbf{SOR}$  y de $Jacobi$   
+
+```{r}
+# D1<-eye(n, m = n)
+# D2<-ones(n, m = n)
+# D3<-zeros(n, m = n)
+# A = matrix(c(-8.1, -7, 6.123, -2, -1, 4,
+# -3, -1, 0, -1, -5, 0.6,
+# -1, 0.33, 6, 1/2), nrow=4, byrow=TRUE)
+# A
+```
+
+-> Hecho - Revisar Ejercicio1.R
+
+```{r}
+
+require(pracma)
+require(Matrix)
+
+n = 4 # Matriz con dimensiones 4x4
+
+D1<-eye(n, m = n)
+D2<-ones(n, m = n)
+D3<-zeros(n, m = n)
+
+A = matrix(c(-8.1, -7, 6.123, -2, -1, 4,
+                           -3, -1, 0, -1, -5, 0.6,
+                           -1, 0.33, 6, 1/2), nrow=4, byrow=TRUE)
+print(A)
+
+b = matrix(c(1.45,3,5.12,-4), nrow=n, byrow=TRUE)
+print(b)
+
+# METODO sOR
+
+# diago <- function(M) { # Obtener Diagonal
+#   M[col(M)!=row(M)] <- 0
+#   return(M)
+# }
+
+# D = diago(A) #Diagonal D para matriz A
+D = diag(diag(A))
+L = tril(A,k=-1,diag = FALSE) # Triangular inferior de la matriz A
+U = triu(A,k=1,diag = FALSE) # Triangular superior de la matriz A
+
+sum = L+U
+sol1 = (-solve(D))
+print(sol1)
+
+T = (sol1)%*%(L+U)
+# T = round((sol)%*%(sum),4)
+
+print(T)
+# print(round(norm(T,"F"),4))
+
+# METODO JACOBI
+
+solJacobi=itersolve(A, b, 1:4,nmax = 1000, tol=1e-9, method = c("Jacobi"))
+print(solJacobi) # 56 Iteraciones
+```
+
+
+2. Dada la siguiente matriz, utilice las funciones anteriores para descomponer la matriz $A=L+D+U$, recuerde que esta descomposición es la del metodo de (Jacobi). Verifique su respuesta   
+    
+Adicionalmente, verifique si A es simétrica, si A es diagonalmente dominante, justifique su respuesta   
+
+```{r, echo=T}
+# A = matrix(c(-8.1, -7/4, 6.1, -2, -1, 4,
+# -3, -1, 0, -1, -5, 0.6,
+# -1, 1/3, 6, 1/2), nrow=4, byrow=TRUE)
+# A
+```
+  
+	b. Utilice la función itersolve(A, b, tol , method = "Gauss-Seidel") y solucionar el sistema asociado a la matriz $A$ con:   $b=[1.45,3,5.12,-4]^{t}$ con una tolerancia de error de $1e^-8$    
+
+	c. Genere las iteraciones del método de Jacobi, calcular error relativo para cada iteracion y comparar la solución con el método de Gauss-Seidel  
+	d. Encuentre la matriz de transición y el radio espectral
+
+-> Hecho - Revisar Ejercicio2.R
+
+```{r error=TRUE}
+#Ejercicio 1
+
+#Punto A
+require(Matrix)
+require(pracma)
+A <- matrix(c(-8.1, -7, 6.123, -2, -1, 4,
+              -3, -1, 0, -1, -5, 0.6,
+              -1, 0.33, 6, 1/2), nrow=4, byrow=TRUE)
+
+ludec <- lu(A)
+L <- ludec$L
+print(L)
+
+U <-ludec$U
+print(U)
+
+D <- diag(diag(A))
+print(D)
+
+A <- L %*% U
+print(A)
+
+
+
+#punto b
+b <- matrix(c(1.45,3,5.12,-4.0), nrow = 4, ncol = 1, byrow = TRUE)
+
+cat("Mediante m?todo de Gauss-Seidel\n")
+
+itersolve(A, b, tol = 1e-9, method = "Gauss-Seidel")
+
+#Punto c
+
+itersolve <- function(A, b, x0 = NULL, 
+                      nmax = 100, tol = .Machine$double.eps^(0.5),
+                      method = c("Gauss-Seidel", "Jacobi", "Richardson")) {
+  stopifnot(is.numeric(A), is.numeric(b))
+  
+  n <- nrow(A)
+  if (ncol(A) != n)
+    stop("Argument 'A' must be a square, positive definite matrix.")
+  b <- c(b)
+  if (length(b) != n)
+    stop("Argument 'b' must have the length 'n = ncol(A) = nrow(A).")
+  if (is.null(x0)) {
+    x0 <- rep(0, n)
+  } else {
+    stopifnot(is.numeric(x0))
+    x0 <- c(x0)
+    if (length(x0) != n)
+      stop("Argument 'x0' must have the length 'n=ncol(A)=nrow(A).")
+  }
+  
+  method <- match.arg(method)
+  
+  if (method == "Jacobi") {
+    L <- diag(diag(A))
+    U <- eye(n)
+    beta <- 1; alpha <- 1
+  } else if (method == "Gauss-Seidel") {
+    L <- tril(A)
+    U <- eye(n)
+    beta <- 1; alpha <- 1
+  } else {  # method = "Richardson"
+    L <- eye(n)
+    U <- L
+    beta <- 0
+  }
+  
+  b <- as.matrix(b)
+  x <- x0 <- as.matrix(x0)
+  r <- b - A %*% x0
+  r0 <- err <- norm(r, "f")
+  
+  iter <- 0
+  while (err > tol && iter < nmax) {
+    iter <- iter + 1
+    z <- qr.solve(L, r)
+    z <- qr.solve(U, z)
+    if (beta == 0) alpha <- drop(t(z) %*% r/(t(z) %*% A %*% z))
+    x <- x + alpha * z
+    r <- b - A %*% x
+    err <- norm(r, "f") / r0
+    cat("Iteraci?n ",iter," -> Error relativo = ", err,"\n")
+  }
+  
+  cat ("\nN?mero de iteraciones realizado fue ",iter)
+  
+  cat ("\n\nSoluciones:")
+  print(c(x))
+}
+A = matrix(c(-8.1, -7, 6.123, -2, -1, 4,
+             -3, -1, 0, -1, -5, 0.6,
+             -1, 0.33, 6, 1/2), nrow=4, byrow=TRUE)
+b <- matrix(c(1.45,3,5.12,-4.0), nrow = 4, ncol = 1, byrow = TRUE)
+cat("Mediante m?todo de Jacobi\n")
+
+itersolve(A, b, nmax = 5, tol = 1e-9, method = "Jacobi")
+
+
+
+#Referencias
+#rstudio-pubs-static.s3.amazonaws.com
+```
+
+
+
+3. Sea el sistema $AX=b$ dados en ejercicio,y  con tol= e^-8        
+ a. Implemente una función en R para que evalue las raíces del polinomio característico asociado a la matriz $A$    
+ b. Use el teorema de convergencia para determinar cuál método iterativo es más favorable.  
+ c. Evalue la matriz de transición para cada caso (método) y en el caso del método de relajación determine el valor óptimo de $\omega$
+ 
+ d. Teniendo en cuenta lo anterior resolver el sistema   
+ e Comparar con la solución por defecto       
+f. Evaluar el número de condición de la matriz A    
+g. Evaluar el efecto en la solución si la entradad $a_{11}=4.01$ aplicar cambio y solucionar. Después, debe comparar con el valor condicón.   
+
+
+```{r, echo=T}
+A = matrix(c(4, -1, -1, -1, -1, 4,
+-1, -1, -1, -1, 4, -1,
+-1, -1, -1, 4), nrow=4, byrow=TRUE)
+A
+b = c(1.11111, 5, 1.5,-2.33)
+b
+```
+
+-> Hecho - Revisar Ejercicio3.R
+
+```{r}
+#Ejercicio 3
+#
+#
+#3. Sea el sistema $AX=b$ dados en ejercicio,y  con tol= e^-8        
+#a. Implemente una funciÃ³n en R para que evalue las raÃ­ces del polinomio caracterÃ­stico asociado a la matriz $A$    
+#  b. Use el teorema de convergencia para determinar cuÃ¡l mÃ©todo iterativo es mÃ¡s favorable.  
+#c. Evalue la matriz de transiciÃ³n para cada caso (mÃ©todo) y en el caso del mÃ©todo de relajaciÃ³n determine el valor Ã³ptimo de $\omega$      
+#  d. Teniendo en cuenta lo anterior resolver el sistema   
+#e Comparar con la soluciÃ³n por defecto       
+#f. Evaluar el nÃºmero de condiciÃ³n de la matriz A    
+#g. Evaluar el efecto en la soluciÃ³n si la entradad $a_{11}=4.01$ aplicar cambio y solucionar. DespuÃ©s, debe comparar con el valor condicÃ³n   
+
+#```{r, echo=T}
+#A = matrix(c(4, -1, -1, -1, -1, 4,
+#             -1, -1, -1, -1, 4, -1,
+#             -1, -1, -1, 4), nrow=4, byrow=TRUE)
+#A
+#b = c(1.11111, 5, 1.5,-2.33)
+#b
+#```
+rm(list=ls())
+library(pracma)
+library(Matrix)
+
+#Punto A
+A = matrix(c(4, -1, -1, -1, -1, 4,
+             -1, -1, -1, -1, 4, -1,
+             -1, -1, -1, 4), nrow=4, byrow=TRUE)
+print(A)
+b = c(1.11111, 5, 1.5,-2.33)
+print(b)
+
+qr.solve(A,b)
+
+#punto B
+
+
+
+
+
+# Parte B
+
+
+# Matriz A
+#Punto A
+A = matrix(c(4, -1, -1, -1, -1, 4,
+             -1, -1, -1, -1, 4, -1,
+             -1, -1, -1, 4), nrow=4, byrow=TRUE)
+print(A)
+b = c(1.11111, 5, 1.5,-2.33)
+print(b)
+
+# Ahora vamos a evaluar la solucion con cada uno de los metodos iterativos y determinaremos cual es mas favorable
+# Teniendo en cuenta que ambos son algoritmos lineales entonces tienen una complejidad de O(n)
+
+toleracia=1e-9
+# Por Gauss-Seidel
+
+solGS=itersolve(A,b,x0=NULL,nmax = 1000,toleracia,method = "Gauss-Seidel")
+print(solGS)
+
+# Por Jacobi
+
+solJacobi=itersolve(A, b, 1:4,nmax = 1000, toleracia, method = c("Jacobi"))
+print(solJacobi)
+
+# Por Richardson
+solRichar=itersolve(A, b, x0 = NULL, nmax = 1000, toleracia, method = c("Richardson"))
+print(solRichar) 
+
+print("Como se puede observar por la cantidad de iteraciones el metodo de gauss-sediel es mas rapido\nlo que quiere decir que converge mas rapido que los algoritmos jacobi y richardson ")
+
+
+#Punto c
+
+A = matrix(c(4, -1, -1, -1, -1, 4,
+             -1, -1, -1, -1, 4, -1,
+             -1, -1, -1, 4), nrow=4, byrow=TRUE)
+print(A)
+b = c(1.11111, 5, 1.5,-2.33)
+print(b)
+
+# w grado de relajaciÃ³n 0<w<2
+fSOR<-function(a,n,w){
+  D=a*eye(n, m = n)
+  L<-a
+  L[lower.tri(L, diag = FALSE)]<-0
+  auxT=(D-(w*L))
+  auxT1=inv(auxT)
+  U<-a
+  U[upper.tri(U, diag = FALSE)]<-0
+  auxT2=((1-w)*D+(w*U))
+  Tfinal=auxT1*auxT2
+}
+#fSOR(A,4,1)
+#Jacobi
+#se realiza la separacion de jacobi entre D, L, U y el resultado es la sumatoria de todas estas divisiones.
+jacobi<-function(a,n){
+  D=a*eye(n, m = n)
+  L<-a
+  L[lower.tri(L, diag = FALSE)]<-0
+  U<-a
+  U[upper.tri(U, diag = FALSE)]<-0
+  AA=D+L+U
+  print(AA)
+}
+jacobi(A,4) # Punto D
+
+#Punto E
+solucion<- solve(A,b)
+print(solucion)
+```
+
+4. a. Pruebe el siguiente algoritmo con una matriz $A_{6}$, modifiquelo para que $a_{ii}=0$ para todo $i$  
+
+```{r, echo=T}
+tril1 <- function(M, k = 0) {
+if (k == 0) {
+M[upper.tri(M, diag = FALSE)] <- 0
+} else {
+M[col(M) >= row(M) + k + 1] <- 0
+}
+return(M)
+}
+```
+Solución Punto 4:
+```{r, echo=TRUE}
+    tril1 <- function(M, k)
+{
+  if (k != 0) {
+    M[!lower.tri(M, diag = TRUE)] <- 0
+    M[!upper.tri(M, diag = TRUE)] <- 0
+  } 
+  else {
+    M[col(M) == row(M) + k ] <- 0
+  }
+  return(M)
+}
+M = matrix(c(9,7,4,
+             10,9,5,
+             6,8,7), nrow = 3, byrow = TRUE)
+r<- tril1(M, 0)
+print("Resultado de la funcion:")
+print(r)
+```
+
+
+
+5. Cree una función que cuente el número de multiplicaciones en el método directo de Gauss-Jordan, para resolver un sistema de $n$ ecuaciones y pruebelo para $n=5$
+
+Solución:
+```{r, echo=TRUE}
+GaussJordanM = function(A, B){ # Se supone det(A) != 0
+  numMult = 0
+  n = nrow(A) # = ncol(A) para que sea cuadrada
+  
+  # matriz ampliada
+  Ab = cbind(A,B)
+  print(Ab)
+  # Eliminación
+  for (k in 1:(n-1)){ # desde columna k=1 hasta k=n-1
+    if(Ab[k,k]==0){ # intercambio de fila
+      fila = which(Ab[k, ]!=0)[1]
+      Ab[c(k, fila), ] = Ab[c(fila, k), ]
+    }
+    
+    # Eliminación columna k
+    for (i in (k+1):n){# debajo de la diagonal
+      # Fi = Fi - a_ik/a_kk * Fk, i=k+1,...,n
+      Ab[i, ] = Ab[i, ] - Ab[i, k]/Ab[k,k]*Ab[k, ]
+      numMult = numMult + 2*(ncol(Ab))
+    }
+  }
+  
+  # Sustitución hacia atrás-------------------------
+  x = rep(NA, times=n)
+  x[n] = Ab[n, n+1]/Ab[n,n]
+  numMult = numMult + n+1
+  
+  for(i in (n-1):1 )
+    {
+    x[i]= (Ab[i, n+1] - sum(Ab[i, (i+1):n]*x[(i+1):n]) ) /Ab[i,i]
+    numMult = numMult + 2*(n-2)
+    }
+
+  cat("Numero de Multiplicaciones del ejercicio:", numMult, "\n")
+  return(x)
+}
+
+A = matrix(c( 0, 1,1,1,1,
+              -5, -4, 3, 4, 8,
+              0, 7, -2, 3, 7,
+              -1, -7, -8, 3,7,
+              3, 7, 5, 5, 9), nrow=5, byrow=TRUE)
+B = matrix(c(1,0,0,0,1), nrow=5, byrow=TRUE)
+
+cat("Solucion ejercicio Punto  5: ","\n")
+GaussJordanM(A,B)
+```
+
+
+7. Dado el siguiente sistema: 
+
+$2x-z=1$
+$\beta$$x+2y-z=2$
+$-x+y+ \alpha$$z=1$  
+
+a. Encuentre el valor de $\alpha$ y $\beta$ para asegura la convergencia por el método de Jacobi y para Gauss Seidel. Sugerencia: utilice el teorema convergencia
+
+b. Genere una tabla que tenga 10 iteraciones, del método de Jacobi con vector inicial $x_{0}=[1,2,3]^t$      
+
+-> Hecho - Revisar Ejercicio3.R
+
+```{r}
+# Ejercicio 7
+# Parte A - Encuentre los valores de Alpha y Beta de la matriz A para asegurar la convergencia de Jacobi
+# Convergencia de Jacobi -> A debe ser 'estrictamente diagonal dominante'
+
+require(BB)
+require(Matrix)
+require(pracma)
+
+beta  <- 0
+alpha <- 3
+
+A = matrix(c( 2,0,-1,
+              beta,2,-1,
+              -1,1,alpha),nrow=3,byrow=TRUE)
+print(A)
+
+b = matrix (c(1,2,1),nrow=3, byrow=TRUE)
+Ab = cbind(A,b)
+print(Ab) # Aca se puede verificar de forma visual la condicion de convergencia.
+
+sol1 = solve(A,b) # Reemplazar solve por Jacobi!!!!
+print(sol1)
+
+# Parte B - Genere una tabla que tenga 10 iteraciones
+
+toleracia=1e-9
+
+solJacobi=itersolve(A, b, x0 = c(1,2,3), nmax = 10, toleracia, method = c("Jacobi"))
+print(solJacobi)
+```
+
+
+
+8. Instalar el paquete Matrix y descomponga la matriz $A$ (del punto dos) de la forma $LU$ y la factorizarla como $A=QR$. Verifique su respuesta.
+
+-> Hecho - Revisar Ejercicio8.R
+
+```{r}
+#Ejercicio 8
+
+#NOTA: Se debe instalar pracma y Matrix para calcular las triangulares inferiores y superiores
+
+require(pracma)
+require(Matrix)
+
+n = 4 # Matriz con dimensiones 4x4
+
+D1<-eye(n, m = n)
+D2<-ones(n, m = n)
+D3<-zeros(n, m = n)
+
+# Matriz A del ejercicio 2
+
+A = matrix(c(-8.1, -7/4, 6.1, -2,
+             -1, 4, -3, -1,
+             0, -1, -5, 0.6,
+             -1, 1/3, 6, 1/2), nrow=4, byrow=TRUE)
+print(A)
+
+# Descomposicion de matriz A en A=LU
+
+ludec <- lu(A)
+LU_Desc <- expand(ludec)
+
+L <- LU_Desc$L # L = Matriz triangular inferior
+print(L)
+
+U <- LU_Desc$U # U = Matriz triangular superior
+print(U)
+
+#D <- diag(diag(A))
+#print(D)
+
+A1 = L %*% U # Multiplicamos para verificar
+print(A1)
+
+# Factorizacion de matriz A en A=QR
+# Q = Matriz ortogonal (Q^T * Q = I)
+# R -> U = Matriz triangular superior
+# Estas matrices se obtienen por medio de Gram-Schimidt
+
+QR <- gramSchmidt(A)
+print(QR)
+
+Q <- QR$Q
+print(Q)
+
+R <- QR$R
+print(R)
+
+A2 = Q %*% R # Multiplicamos para verificar
+print(A2)
+
+
+```
+
+
+9. Realice varias pruebas que la matriz de transición por el método de Gauss-Seidel esta dada por $T=(-D^{-1}U)(I+LD^{-1})^{-1}$  
+Solución:
+
+```{r, echo=TRUE}
+
+N <- 3
+A <- Diag(rep(3,N)) + Diag(rep(-2, N-1), k=-1) + Diag(rep(-1, N-1), k=1)
+x0 <- rep(0, N)
+B = c(4,5,9)
+
+itersolve(A, B, tol=1e-7 , method = "Gauss-Seidel")
+```
+
+
+### Sistemas No lineales  
+10.
+a. Determinar numéricamente la intersección entre la circunferencia $x^2 + y^2 = 1$ y la recta $y = x$. Usamos una aproximación inicial $(1,1)$. 
+
+-> Hecho - Revisar Ejercicio10A.R
+
+```{r}
+#Ejercicio 10 - Parte A
+#NOTA: Se debe instalar lib BB
+
+require(BB)
+
+sistema = function(x){
+  f = rep(NA,length(x))
+  f[1] = x[1]^2+x[2]^2-1
+  f[2] = x[1]-x[2]
+  f
+}
+
+p0 = c(1,1)
+sol1=BBsolve(par=p0, fn=sistema) # msg: Succesful convergence
+cat("Solucion inicial de (1,1): \n",sol1[[1]],"\n")
+p0 = c(-1,1)
+sol2=BBsolve(par=p0, fn=sistema) # msg: Succesful convergence
+cat("Solucion inicial de (-1,1): \n",sol2[[1]],"\n")
+
+# Las soluciones para x^2+y^2=1 son:
+# y1 = sqrt(1-x^2); y2 = sqrt(1-x^2) -- Con Centro en (0,0)
+
+f1=function(x){
+  sqrt(1-x^2)
+}
+f2=function(x){
+  -sqrt(1-x^2)
+}
+f3=function(x){
+  x
+}
+
+# Al resover x^2 + y^2 = 1 respecto a la recta y=x, se obtienen
+# los siguientes puntos:
+#   x1=(1/sqrt(2)); x2=(-1/sqrt(2))
+#   Al radicalizar +- (1/sqrt(2)), se obtiene (sqrt(2)/2)
+
+x=seq(-1,1,0.00001) # Con una tolerancia de 10e-6
+plot(x,f3(x),type="l",col="red")
+abline(h=0,col="blue") # Eje X
+lines(x,f1(x),type="l",col="green") # Circunferencia arriba del eje X
+lines(x,f2(x),type="l",col="green") # Circunferencia por debajo del eje X
+points(rbind(c(sqrt(2)/2,sqrt(2)/2)),pch=17,cex=1.5,col="red") # Puntos de Interseccion
+points(rbind(c(-sqrt(2)/2,-sqrt(2)/2)),pch=17,cex=1.5,col="red") # Puntos de Interseccion
+```
+
+
+
+b Analizar y comentar el siguiente código  
+```{r, echo=T}
+trigexp = function(x) {
+n = length(x)
+F = rep(NA, n)
+F[1] = 3*x[1]^2 + 2*x[2] - 5 + sin(x[1] - x[2]) * sin(x[1] + x[2])
+tn1 = 2:(n-1)
+F[tn1] = -x[tn1-1] * exp(x[tn1-1] - x[tn1]) + x[tn1] *
+( 4 + 3*x[tn1]^2) + 2 * x[tn1 + 1] + sin(x[tn1] -
+x[tn1 + 1]) * sin(x[tn1] + x[tn1 + 1]) - 8
+F[n] = -x[n-1] * exp(x[n-1] - x[n]) + 4*x[n] - 3
+F
+}
+n = 10000
+p0 = runif(n) # n initial random starting guesses
+sol = BBsolve(par=p0, fn=trigexp)
+sol$par
+```
+
+-> Hecho - Revisar Ejercicio10B.R
+
+```{r}
+#Ejercicio 10 - Parte B
+
+#NOTA: Se debe instalar lib BB
+
+library("BB")
+require(BB)
+
+# Funcion 1: 3x^2+2y-5+sin(x-y)*sin(x+y)
+
+trigexp = function(x) {
+  n = length(x)
+  F = rep(NA, n)
+  
+  # Ecuaciones del sistema
+  F[1] = 3*x[1]^2 + 2*x[2] - 5 + sin(x[1] - x[2]) * sin(x[1] + x[2])
+  
+  tn1 = 2:(n-1) # Esto actua como un 'for in range(2,n-1)' = Secuencia de 2
+                # hasta n-1 para los valores de X
+  
+  # Se establece el siguiente sistema de ecuciones:
+  # se ingresan tn1 ecuaciones que iran desde 2 hasta n-1
+  F[tn1] = -x[tn1-1] * exp(x[tn1-1] - x[tn1]) + x[tn1] *
+    ( 4 + 3*x[tn1]^2) + 2 * x[tn1 + 1] + sin(x[tn1] -
+                                               x[tn1 + 1]) * sin(x[tn1] + x[tn1 + 1]) - 8
+  
+  # Como la anterior evalua hasta n-1, aca se evalua la ecuacion para n
+  F[n] = -x[n-1] * exp(x[n-1] - x[n]) + 4*x[n] - 3  # Esta ecuacion puede ser descrita como:
+                                                    # -z * e^(z-w) + 4z - 3
+  F # Retornamos
+}
+
+n = 10000 # Cantidad de numeros aleatorios para la ecuacion - Aca serian 10000 casos para evaluar la efectividad del metodo
+p0 = runif(n) # Genera 'n' numeros aleatorios para los "valores iniciales" para F
+sol = BBsolve(par=p0, fn=trigexp)
+sol$par # 10mil Soluciones
+# [1] 1 1 1 1 1 .......
+```
